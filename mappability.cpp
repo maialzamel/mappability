@@ -7,7 +7,7 @@ inline void run(TIndex & index, TText const & text, StringSet<CharString> const 
                 CharString const & outputPath, unsigned const length, unsigned const chromosomeId)
 {
     auto scheme = OptimalSearchSchemes<0, errors>::VALUE;
-    _optimalSearchSchemeComputeFixedBlocklength(scheme, length);
+    _optimalSearchSchemeComputeFixedBlocklength(scheme, length - 1);
 
     uint64_t textLength = seqan::length(text);
     // TODO: is there an upper bound? are we interested whether a k-mer has 60.000 or 70.000 hits?
@@ -16,35 +16,59 @@ inline void run(TIndex & index, TText const & text, StringSet<CharString> const 
 
     // TODO(cpockrandt): think about scheduling strategy
     #pragma omp parallel for schedule(dynamic, 1000000)
-    for (uint64_t i = 0; i < textLength - length + 1; ++i)
-    {
-
-        unsigned hits = 0;
+    for (uint64_t i = 0; i < textLength - length + 1; i += 2)
+    { // TODO: abort criteria in _optimalSearchScheme
+        unsigned hitsL = 0, hitsR = 0;
         // TODO(cpockrandt): for more than 2 errors we need to filter duplicates when counting or
         // choose disjunct search schemes. also we need to do this for EditDistance!
-        auto delegate = [&hits](auto const &it, auto const & /*read*/, unsigned const /*errors*/) {
-            if (hits + countOccurrences(it) < (1 << 16))
-                hits += countOccurrences(it);
+        auto delegate = [&hitsL, &hitsR, i, length, textLength, &text](auto /*const &*/it, auto const & /*read*/, unsigned const errors_spent) {
+            if (errors_spent == errors)
+            {
+                if (i + length < textLength)
+                {
+                    auto it2 = it;
+                    if (goDown(it2, text[i + length], Rev()))
+                        hitsR = std::min((uint64_t) countOccurrences(it2) + hitsR, (uint64_t) (1 << 16) - 1);
+                }
+
+                if (goDown(it, text[i], Fwd()))
+                    hitsL = std::min((uint64_t) countOccurrences(it) + hitsL, (uint64_t) (1 << 16) - 1);
+            }
             else
-                hits = (1 << 16) - 1;
+            {
+                if (i + length < textLength)
+                {
+                    auto it2 = it;
+                    if (goDown(it2, Rev()))
+                    {
+                        do {
+                            hitsR = std::min((uint64_t) countOccurrences(it2) + hitsR, (uint64_t) (1 << 16) - 1);
+                        } while (goRight(it2, Rev()));
+                    }
+                }
+
+                if (goDown(it, Fwd()))
+                {
+                    do {
+                        hitsL = std::min((uint64_t) countOccurrences(it) + hitsL, (uint64_t) (1 << 16) - 1);
+                    } while(goRight(it, Fwd()));
+                }
+            }
         };
 
-        auto const & needle = infix(text, i, i + length);
-        // goRoot(it); // TODO: does not interfere?
+        auto const & needle = infix(text, i + 1, i + length);
         Iter<TIndex, VSTree<TopDown<> > > it(index);
         _optimalSearchScheme(delegate, it, needle, scheme, TDistance());
-        c[i] = hits;
+        c[i] = hitsL;
+        if (i + 1 < c.size())
+            c[i + 1] = hitsR;
     }
-    cout << mytime() << "Done." << endl;
-
-    for (unsigned i = 0; i < c.size(); ++i)
-        cout << c[i] << " ";
-    cout << endl;
+    cout << mytime() << "Done.\n";
 
     std::string output_path = toCString(outputPath);
     output_path += std::to_string(chromosomeId);
     store_to_file(c, output_path);
-    cout << mytime() << "Saved to disk: " << output_path << endl;
+    cout << mytime() << "Saved to disk: " << output_path << '\n';
 }
 
 template <typename TDistance, typename TIndex, typename TText>
@@ -64,7 +88,7 @@ inline void run(TIndex /*const*/ & index, TText const & text, StringSet<CharStri
                break;
         case 4: run<4, TDistance>(index, text, ids, outputPath, length, chromosomeId);
                break;
-        default: cout << "E = " << errors << " not yet supported." << endl;
+        default: cout << "E = " << errors << " not yet supported.\n";
                  exit(1);
     }
 }
