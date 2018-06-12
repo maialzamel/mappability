@@ -1,12 +1,11 @@
 using namespace seqan;
 
 template <unsigned errors, typename TIndex>
-inline void runAlgo2Prototype(TIndex & index, unsigned const length, sdsl::int_vector<16> & c)
+inline void runAlgo2Prototype(TIndex & index, auto const & text, unsigned const length, sdsl::int_vector<16> & c)
 {
     auto scheme = OptimalSearchSchemes<0, errors>::VALUE;
     _optimalSearchSchemeComputeFixedBlocklength(scheme, length - 1);
 
-    auto & text = indexText(index);
     uint64_t textLength = seqan::length(text);
 
     #pragma omp parallel for schedule(dynamic, 1000000)
@@ -233,8 +232,10 @@ inline void runAlgo2(TIndex & index, auto const & text, unsigned const length, s
 
     uint64_t textLength = seqan::length(text);
 
-    // #pragma omp parallel for schedule(dynamic, 1000000)
-    for (uint64_t i = 0; i < textLength - length + 1; i += length - overlap + 1)
+    #pragma omp parallel for schedule(dynamic, 1000000)
+    const unsigned max_i = textLength - length + 1;
+    const unsigned step_size = length - overlap + 1;
+    for (uint64_t i = 0; i < max_i; i += step_size)
     {
         unsigned hits[length - overlap + 1] = {};
         auto delegate = [&hits, i, length, textLength, overlap, &text](auto /*const &*/it, auto const & /*read*/, unsigned const errors_spent) {
