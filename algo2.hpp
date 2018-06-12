@@ -232,9 +232,9 @@ inline void runAlgo2(TIndex & index, auto const & text, unsigned const length, s
 
     uint64_t textLength = seqan::length(text);
 
-    #pragma omp parallel for schedule(dynamic, 1000000)
     const unsigned max_i = textLength - length + 1;
     const unsigned step_size = length - overlap + 1;
+    #pragma omp parallel for schedule(dynamic, 1000000)
     for (uint64_t i = 0; i < max_i; i += step_size)
     {
         unsigned hits[length - overlap + 1] = {};
