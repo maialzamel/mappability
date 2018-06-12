@@ -41,5 +41,8 @@ set (CMAKE_CXX_FLAGS "-std=c++14 -DSEQAN_DISABLE_VERSION_CHECK=YES -I ${CUR_DIR}
 add_executable (mappability mappability.cpp)
 target_link_libraries (mappability ${SEQAN_LIBRARIES})
 
+add_executable (tests tests.cpp)
+target_link_libraries (tests ${SEQAN_LIBRARIES})
+
 add_executable (create_index create_index.cpp)
 target_link_libraries (create_index ${SEQAN_LIBRARIES})

@@ -2,6 +2,13 @@
 #include <seqan/seq_io.h>
 #include <seqan/index.h>
 
+#include <chrono>
+
+#include <sdsl/int_vector.hpp>
+
+#include "algo1.hpp"
+#include "algo2.hpp"
+
 using namespace std;
 using namespace seqan;
 
