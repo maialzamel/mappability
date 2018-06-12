@@ -10,11 +10,11 @@ inline void run(TIndex /*const*/ & index, TText const & text, StringSet<CharStri
     cout << mytime() << "Vector initialized (size: " << c.size() << ")." << endl;
     switch (errors)
     {
-        case 0: runAlgo2<0/*, TDistance*/>(index, text, length, c, overlap);
+        case 0: runAlgo2<0/*, TDistance*/>(index, text, length, c, length - overlap);
                 break;
-        case 1: runAlgo2<1/*, TDistance*/>(index, text, length, c, overlap);
+        case 1: runAlgo2<1/*, TDistance*/>(index, text, length, c, length - overlap);
                 break;
-        case 2: runAlgo2<2/*, TDistance*/>(index, text, length, c, overlap);
+        case 2: runAlgo2<2/*, TDistance*/>(index, text, length, c, length - overlap);
                 break;
         // case 3: run<3, TDistance>(index, text, ids, outputPath, length, chromosomeId);
         //        break;
