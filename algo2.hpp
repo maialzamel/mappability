@@ -1,14 +1,14 @@
 using namespace seqan;
 
 template <unsigned errors, typename TIndex>
-inline void runAlgo2Prototype(TIndex & index, auto const & text, unsigned const length, sdsl::int_vector<16> & c)
+inline void runAlgo2Prototype(TIndex & index, auto const & text, unsigned const length, sdsl::int_vector<16> & c, unsigned const threads)
 {
     auto scheme = OptimalSearchSchemes<0, errors>::VALUE;
     _optimalSearchSchemeComputeFixedBlocklength(scheme, length - 1);
 
     uint64_t textLength = seqan::length(text);
 
-    #pragma omp parallel for schedule(dynamic, 1000000)
+    #pragma omp parallel for schedule(dynamic, 1000000) num_threads(threads)
     for (uint64_t i = 0; i < textLength - length + 1; i += 2)
     {
         unsigned hitsL = 0, hitsR = 0;
@@ -63,8 +63,8 @@ inline void runAlgo2Prototype(TIndex & index, auto const & text, unsigned const 
 
 template <typename TIter>
 void extendExact(TIter it, unsigned * hits, auto & text, unsigned const length,
-    unsigned a, unsigned b, // searched interval
-    unsigned ab, unsigned bb // entire interval
+    uint64_t a, uint64_t b, // searched interval
+    uint64_t ab, uint64_t bb // entire interval
 )
 {
     if (b - a + 1 == length)
@@ -75,12 +75,12 @@ void extendExact(TIter it, unsigned * hits, auto & text, unsigned const length,
     //if (b + 1 <= bb)
     //{
         auto it2 = it;
-        unsigned brm = a + length - 1;
-        unsigned b_new = b + (((brm - b) + 2 - 1) / 2); // ceil((bb - b)/2)
+        uint64_t brm = a + length - 1;
+        uint64_t b_new = b + (((brm - b) + 2 - 1) / 2); // ceil((bb - b)/2)
         if (b_new <= bb)
         {
             bool success = true;
-            for (unsigned i = b + 1; i <= b_new && success; ++i)
+            for (uint64_t i = b + 1; i <= b_new && success; ++i)
             {
                 success = goDown(it2, text[i], Rev());
             }
@@ -91,10 +91,10 @@ void extendExact(TIter it, unsigned * hits, auto & text, unsigned const length,
 
     if (a - 1 >= ab)
     {
-        signed alm = b + 1 - length;
-        signed a_new = alm + std::max((signed) ((a - alm) - 1) / 2, 0);
+        int64_t alm = b + 1 - length;
+        int64_t a_new = alm + std::max((int64_t) ((a - alm) - 1) / 2, 0l);
         bool success = true;
-        for (signed i = a - 1; i >= a_new && success; --i)
+        for (int64_t i = a - 1; i >= a_new && success; --i)
         {
             success = goDown(it, text[i], Fwd());
         }
@@ -106,16 +106,16 @@ void extendExact(TIter it, unsigned * hits, auto & text, unsigned const length,
 // forward
 template <typename TIter>
 void extend(TIter it, unsigned * hits, unsigned errors_left, auto & text, unsigned const length,
-            unsigned a, unsigned b, // searched interval
-            unsigned ab, unsigned bb // entire interval
+            uint64_t a, uint64_t b, // searched interval
+            uint64_t ab, uint64_t bb // entire interval
 );
 
 // TODO: remove text everywhere: auto & text = indexText(index(it));
 template <typename TIter>
 void approxSearch(TIter it, unsigned * hits, unsigned errors_left, auto & text, unsigned const length,
-            unsigned a, unsigned b, // searched interval
-            unsigned ab, unsigned bb, // entire interval
-            unsigned b_new,
+            uint64_t a, uint64_t b, // searched interval
+            uint64_t ab, uint64_t bb, // entire interval
+            uint64_t b_new,
             Rev const & /*tag*/
 )
 {
@@ -136,7 +136,7 @@ void approxSearch(TIter it, unsigned * hits, unsigned errors_left, auto & text, 
     }
     else
     {
-        for (unsigned i = b + 1; i <= b_new; ++i)
+        for (uint64_t i = b + 1; i <= b_new; ++i)
         {
             if (!goDown(it, text[i], Rev()))
                 return;
@@ -147,9 +147,9 @@ void approxSearch(TIter it, unsigned * hits, unsigned errors_left, auto & text, 
 }
 template <typename TIter>
 void approxSearch(TIter it, unsigned * hits, unsigned errors_left, auto & text, unsigned const length,
-                  unsigned a, unsigned b, // searched interval
-                  unsigned ab, unsigned bb, // entire interval
-                  signed a_new,
+                  uint64_t a, uint64_t b, // searched interval
+                  uint64_t ab, uint64_t bb, // entire interval
+                  int64_t a_new,
                   Fwd const & /*tag*/
 )
 {
@@ -170,7 +170,7 @@ void approxSearch(TIter it, unsigned * hits, unsigned errors_left, auto & text, 
     }
     else
     {
-        for (signed i = a - 1; i >= a_new; --i)
+        for (int64_t i = a - 1; i >= a_new; --i)
         {
             if (!goDown(it, text[i], Fwd()))
                 return;
@@ -182,8 +182,8 @@ void approxSearch(TIter it, unsigned * hits, unsigned errors_left, auto & text, 
 
 template <typename TIter>
 void extend(TIter it, unsigned * hits, unsigned errors_left, auto & text, unsigned const length,
-    unsigned a, unsigned b, // searched interval
-    unsigned ab, unsigned bb // entire interval
+    uint64_t a, uint64_t b, // searched interval
+    uint64_t ab, uint64_t bb // entire interval
 )
 {
     if (errors_left == 0)
@@ -198,8 +198,8 @@ void extend(TIter it, unsigned * hits, unsigned errors_left, auto & text, unsign
     }
     //if (b + 1 <= bb)
     //{
-        unsigned brm = a + length - 1;
-        unsigned b_new = b + (((brm - b) + 2 - 1) / 2); // ceil((bb - b)/2)
+        uint64_t brm = a + length - 1;
+        uint64_t b_new = b + (((brm - b) + 2 - 1) / 2); // ceil((bb - b)/2)
         if (b_new <= bb)
         {
             approxSearch(it, hits, errors_left, text, length,
@@ -213,8 +213,8 @@ void extend(TIter it, unsigned * hits, unsigned errors_left, auto & text, unsign
 
     if (a - 1 >= ab)
     {
-        signed alm = b + 1 - length;
-        signed a_new = alm + std::max((signed) ((a - alm) - 1) / 2, 0);
+        int64_t alm = b + 1 - length;
+        int64_t a_new = alm + std::max((int64_t) ((a - alm) - 1) / 2, 0l);
         approxSearch(it, hits, errors_left, text, length,
                      a, b, // searched interval
                      ab, bb, // entire interval
@@ -225,21 +225,23 @@ void extend(TIter it, unsigned * hits, unsigned errors_left, auto & text, unsign
 }
 
 template <unsigned errors, typename TIndex>
-inline void runAlgo2(TIndex & index, auto const & text, unsigned const length, sdsl::int_vector<16> & c, unsigned const overlap)
+inline void runAlgo2(TIndex & index, auto const & text, unsigned const length, sdsl::int_vector<16> & c, unsigned const overlap, unsigned const threads)
 {
     auto scheme = OptimalSearchSchemes<0, errors>::VALUE;
     _optimalSearchSchemeComputeFixedBlocklength(scheme, overlap);
 
     uint64_t textLength = seqan::length(text);
 
-    const unsigned max_i = textLength - length + 1;
-    const unsigned step_size = length - overlap + 1;
-    #pragma omp parallel for schedule(dynamic, 1000000)
-    for (uint64_t i = 0; i < max_i; i += step_size)
+    const uint64_t max_i = textLength - length + 1;
+    const uint64_t step_size = length - overlap + 1;
+    #pragma omp parallel for schedule(guided) num_threads(threads)
+    //#pragma omp parallel for schedule(dynamic, 1000000)
+    // TODO: if we choose a multiple of step_size * |cyclic_rotations of int_vector| as chunks (not just chunksize), we dont need to worry about locking
+    for (uint64_t i = 0/*startPos*/; i < max_i; i += step_size)
     {
         unsigned hits[length - overlap + 1] = {};
         auto delegate = [&hits, i, length, textLength, overlap, &text](auto /*const &*/it, auto const & /*read*/, unsigned const errors_spent) {
-            unsigned bb = std::min(textLength - 1, i + length - 1 + length - overlap);
+            uint64_t bb = std::min(textLength - 1, i + length - 1 + length - overlap);
             //cout << "i = " << i << ": " << representative(it, Fwd()) << " (" << countOccurrences(it) << ")" << endl;
             extend(it, hits, errors - errors_spent, text, length,
                 i + length - overlap, i + length - 1, // searched interval
@@ -250,8 +252,8 @@ inline void runAlgo2(TIndex & index, auto const & text, unsigned const length, s
         auto const & needle = infix(text, i + length - overlap, i + length);
         Iter<TIndex, VSTree<TopDown<> > > it(index);
         _optimalSearchScheme(delegate, it, needle, scheme, HammingDistance());
-        unsigned max_pos = std::min(i + length - overlap, textLength - length/* + 1*/);
-        for (unsigned j = i; j <= max_pos; ++j)
+        uint64_t max_pos = std::min(i + length - overlap, textLength - length/* + 1*/);
+        for (uint64_t j = i; j <= max_pos; ++j)
             c[j] = hits[j - i];
     }
 }

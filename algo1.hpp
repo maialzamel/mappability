@@ -1,14 +1,14 @@
 using namespace seqan;
 
 template <unsigned errors, typename TIndex>
-inline void runAlgo1(TIndex & index, auto const & text, unsigned const length, sdsl::int_vector<16> & c)
+inline void runAlgo1(TIndex & index, auto const & text, unsigned const length, sdsl::int_vector<16> & c, unsigned const /*overlap*/, unsigned const threads)
 {
     auto scheme = OptimalSearchSchemes<0, errors>::VALUE;
     _optimalSearchSchemeComputeFixedBlocklength(scheme, length);
 
     uint64_t textLength = seqan::length(text);
 
-    #pragma omp parallel for schedule(dynamic, 1000000)
+    #pragma omp parallel for schedule(dynamic, 1000000) num_threads(threads)
     for (uint64_t i = 0; i < textLength - length + 1; ++i)
     {
         unsigned hits = 0;

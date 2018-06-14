@@ -1,20 +1,24 @@
+//#include <inttypes.h>
+
+//uint64_t startPos = 0;
+
 #include "common.h"
 
 template <typename TDistance, typename TIndex, typename TText>
 inline void run(TIndex /*const*/ & index, TText const & text, StringSet<CharString> const & ids,
                 CharString const & outputPath, unsigned const errors, unsigned const length,
-                unsigned const chromosomeId, unsigned const overlap)
+                unsigned const chromosomeId, unsigned const overlap, unsigned const threads)
 {
     sdsl::int_vector<16> c(seqan::length(text) - length + 1);
     // TODO: is there an upper bound? are we interested whether a k-mer has 60.000 or 70.000 hits?
     cout << mytime() << "Vector initialized (size: " << c.size() << ")." << endl;
     switch (errors)
     {
-        case 0: runAlgo2<0/*, TDistance*/>(index, text, length, c, length - overlap);
+        case 0: runAlgo2<0/*, TDistance*/>(index, text, length, c, length - overlap, threads);
                 break;
-        case 1: runAlgo2<1/*, TDistance*/>(index, text, length, c, length - overlap);
+        case 1: runAlgo2<1/*, TDistance*/>(index, text, length, c, length - overlap, threads);
                 break;
-        case 2: runAlgo2<2/*, TDistance*/>(index, text, length, c, length - overlap);
+        case 2: runAlgo2<2/*, TDistance*/>(index, text, length, c, length - overlap, threads);
                 break;
         // case 3: run<3, TDistance>(index, text, ids, outputPath, length, chromosomeId);
         //        break;
@@ -29,11 +33,15 @@ inline void run(TIndex /*const*/ & index, TText const & text, StringSet<CharStri
     output_path += std::to_string(chromosomeId);
     store_to_file(c, output_path);
     cout << mytime() << "Saved to disk: " << output_path << '\n';
+
+    for (unsigned i = 0; i < 200; ++i)
+        std::cout << c[i] << ' ';
+    std::cout << '\n';
 }
 
 template <typename TChar, typename TAllocConfig, typename TDistance>
 inline void run(StringSet<CharString>  & ids, CharString const & indexPath, CharString const & outputPath,
-                unsigned const errors, unsigned const length, bool const singleIndex, unsigned const overlap)
+                unsigned const errors, unsigned const length, bool const singleIndex, unsigned const overlap, unsigned const threads)
 {
     typedef String<TChar, TAllocConfig> TString;
     if (singleIndex)
@@ -46,7 +54,7 @@ inline void run(StringSet<CharString>  & ids, CharString const & indexPath, Char
         typename Concatenator<StringSet<TString, Owner<ConcatDirect<> > >>::Type concatText = concat(text);
 
         cout << mytime() << "Index loaded." << endl;
-        run<TDistance>(index, concatText, ids, outputPath, errors, length, 0, overlap);
+        run<TDistance>(index, concatText, ids, outputPath, errors, length, 0, overlap, threads);
     }
     else
     {
@@ -58,7 +66,7 @@ inline void run(StringSet<CharString>  & ids, CharString const & indexPath, Char
             open(index, toCString(_indexPath), OPEN_RDONLY);
             auto & text = indexText(index);
             cout << mytime() << "Index of " << ids[i] << " loaded." << endl;
-            run<TDistance>(index, text, ids, outputPath, errors, length, i, overlap);
+            run<TDistance>(index, text, ids, outputPath, errors, length, i, overlap, threads);
         }
     }
 }
@@ -66,26 +74,26 @@ inline void run(StringSet<CharString>  & ids, CharString const & indexPath, Char
 template <typename TChar, typename TAllocConfig>
 inline void run(StringSet<CharString> & ids, CharString const & indexPath, CharString const & outputPath,
                 unsigned const errors, unsigned const length, bool const indels, bool const singleIndex,
-                unsigned const overlap)
+                unsigned const overlap, unsigned const threads)
 {
     if (indels) {
         cout << "E = " << errors << " not yet supported.\n";
         exit(1);
-        // run<TChar, TAllocConfig, EditDistance>(ids, indexPath, outputPath, errors, length, singleIndex, overlap);
+        // run<TChar, TAllocConfig, EditDistance>(ids, indexPath, outputPath, errors, length, singleIndex, overlap, threads);
     }
     else
-        run<TChar, TAllocConfig, HammingDistance>(ids, indexPath, outputPath, errors, length, singleIndex, overlap);
+        run<TChar, TAllocConfig, HammingDistance>(ids, indexPath, outputPath, errors, length, singleIndex, overlap, threads);
 }
 
 template <typename TChar>
 inline void run(StringSet<CharString> & ids, CharString const & indexPath, CharString const & outputPath,
                 unsigned const errors, unsigned const length, bool const indels, bool const singleIndex,
-                bool const mmap, unsigned const overlap)
+                bool const mmap, unsigned const overlap, unsigned const threads)
 {
     if (mmap)
-        run<TChar, MMap<> >(ids, indexPath, outputPath, errors, length, indels, singleIndex, overlap);
+        run<TChar, MMap<> >(ids, indexPath, outputPath, errors, length, indels, singleIndex, overlap, threads);
     else
-        run<TChar, Alloc<> >(ids, indexPath, outputPath, errors, length, indels, singleIndex, overlap);
+        run<TChar, Alloc<> >(ids, indexPath, outputPath, errors, length, indels, singleIndex, overlap, threads);
 }
 
 int main(int argc, char *argv[])
@@ -117,20 +125,28 @@ int main(int argc, char *argv[])
         "This makes the algorithm only slightly slower but the index does not have to be loaded into main memory "
         "(which takes some time)."));
 
+    addOption(parser, ArgParseOption("t", "threads", "Number of threads", ArgParseArgument::INTEGER, "INT"));
+    setDefaultValue(parser, "threads", omp_get_max_threads());
+
+    //addOption(parser, ArgParseOption("x", "startPos", "startPos (for debugging large genomes", ArgParseArgument::INT64, "INT64"));
+    //setDefaultValue(parser, "startPos", 0);
+
     ArgumentParser::ParseResult res = parse(parser, argc, argv);
     if (res != ArgumentParser::PARSE_OK)
         return res == ArgumentParser::PARSE_ERROR;
 
     // Retrieve input parameters
     CharString indexPath, outputPath, _indexPath;
-    unsigned errors, length, overlap;
+    unsigned errors, length, overlap, threads;
     getOptionValue(errors, parser, "errors");
     getOptionValue(length, parser, "length");
     getOptionValue(overlap, parser, "overlap");
     getOptionValue(indexPath, parser, "index");
     getOptionValue(outputPath, parser, "output");
+    getOptionValue(threads, parser, "threads");
     bool indels = isSet(parser, "indels");
     bool mmap = isSet(parser, "mmap");
+    //getOptionValue(startPos, parser, "startPos");
 
     if (overlap > length - errors - 2)
     {
@@ -156,7 +172,7 @@ int main(int argc, char *argv[])
     open(ids, toCString(_indexPath), OPEN_RDONLY);
 
     if (alphabet == "dna4")
-        run<Dna>(ids, indexPath, outputPath, errors, length, indels, singleIndex, mmap, overlap);
+        run<Dna>(ids, indexPath, outputPath, errors, length, indels, singleIndex, mmap, overlap, threads);
     else
-        run<Dna5>(ids, indexPath, outputPath, errors, length, indels, singleIndex, mmap, overlap);
+        run<Dna5>(ids, indexPath, outputPath, errors, length, indels, singleIndex, mmap, overlap, threads);
 }

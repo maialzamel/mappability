@@ -15,6 +15,7 @@ int main(int argc, char *argv[])
     cout << "Seed: " << seed << '\n';
     mt19937_64 rng(seed);
 
+    unsigned const threads = omp_get_num_threads();
     constexpr unsigned errors = 1;
 
     while (true)
@@ -32,12 +33,12 @@ int main(int argc, char *argv[])
             unsigned length = (rng() % 25) + 4;
 
             sdsl::int_vector<16> c1(seqan::length(text) - length + 1);
-            runAlgo2Prototype<errors>(index, genome, length, c1);
+            runAlgo2Prototype<errors>(index, genome, length, c1, threads);
 
             for (unsigned overlap = 0; overlap <= length - errors - 2; ++overlap) // because there have to be enough characters for the infix using search schemes
             {
                 sdsl::int_vector<16> c2(seqan::length(text) - length + 1);
-                runAlgo2<errors>(index, genome, length, c2, length - overlap);
+                runAlgo2<errors>(index, genome, length, c2, length - overlap, threads);
 
                 for (unsigned i = 0; i < c1.size(); ++i)
                 {
