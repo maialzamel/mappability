@@ -62,7 +62,7 @@ inline void runAlgo2Prototype(TIndex & index, auto const & text, unsigned const 
 }
 
 template <typename TIter>
-void extendExact(TIter it, unsigned * hits, auto & text, unsigned const length,
+inline void extendExact(TIter it, unsigned * hits, auto & text, unsigned const length,
     uint64_t a, uint64_t b, // searched interval
     uint64_t ab, uint64_t bb // entire interval
 )
@@ -105,14 +105,14 @@ void extendExact(TIter it, unsigned * hits, auto & text, unsigned const length,
 
 // forward
 template <typename TIter>
-void extend(TIter it, unsigned * hits, unsigned errors_left, auto & text, unsigned const length,
+inline void extend(TIter it, unsigned * hits, unsigned errors_left, auto & text, unsigned const length,
             uint64_t a, uint64_t b, // searched interval
             uint64_t ab, uint64_t bb // entire interval
 );
 
 // TODO: remove text everywhere: auto & text = indexText(index(it));
 template <typename TIter>
-void approxSearch(TIter it, unsigned * hits, unsigned errors_left, auto & text, unsigned const length,
+inline void approxSearch(TIter it, unsigned * hits, unsigned errors_left, auto & text, unsigned const length,
             uint64_t a, uint64_t b, // searched interval
             uint64_t ab, uint64_t bb, // entire interval
             uint64_t b_new,
@@ -146,7 +146,7 @@ void approxSearch(TIter it, unsigned * hits, unsigned errors_left, auto & text, 
     }
 }
 template <typename TIter>
-void approxSearch(TIter it, unsigned * hits, unsigned errors_left, auto & text, unsigned const length,
+inline void approxSearch(TIter it, unsigned * hits, unsigned errors_left, auto & text, unsigned const length,
                   uint64_t a, uint64_t b, // searched interval
                   uint64_t ab, uint64_t bb, // entire interval
                   int64_t a_new,
@@ -181,7 +181,7 @@ void approxSearch(TIter it, unsigned * hits, unsigned errors_left, auto & text, 
 }
 
 template <typename TIter>
-void extend(TIter it, unsigned * hits, unsigned errors_left, auto & text, unsigned const length,
+inline void extend(TIter it, unsigned * hits, unsigned errors_left, auto & text, unsigned const length,
     uint64_t a, uint64_t b, // searched interval
     uint64_t ab, uint64_t bb // entire interval
 )
