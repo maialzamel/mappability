@@ -1,35 +1,35 @@
-#include <seqan/arg_parse.h>
-#include <seqan/seq_io.h>
-#include <seqan/index.h>
-
-#include <chrono>
-
-#include <sdsl/int_vector.hpp>
-
-#include "algo1.hpp"
-#include "algo2.hpp"
-
-using namespace std;
-using namespace seqan;
-
 // reduce space consumption.
 // requires genome not to have more than ~ 4 gigabases
 // multi-sequence fasta file must contain less than ~64k sequences of at most ~ 4 gigabases in total
 
 namespace seqan {
 
-template <typename TChar, typename TOwner>
-struct SAValue<StringSet<String<TChar>, TOwner> >
+template <typename TChar, typename TAlloc, typename TOwner>
+struct SAValue<StringSet<String<TChar, TAlloc>, TOwner> >
 {
     typedef Pair<uint16_t, uint32_t> Type;
 };
 
-template <typename TChar, typename TOwner>
-struct SAValue<String<TChar, TOwner> >
+template <typename TChar, typename TAlloc>
+struct SAValue<String<TChar, TAlloc> >
 {
     typedef uint32_t Type;
 };
 
+};
+
+struct Options
+{
+    unsigned errors;
+    unsigned length;
+    unsigned overlap;
+    unsigned threads;
+    bool mmap;
+    bool indels;
+    bool singleIndex;
+    seqan::CharString indexPath;
+    seqan::CharString outputPath;
+    seqan::CharString alphabet;
 };
 
 std::string mytime()
@@ -43,15 +43,26 @@ std::string mytime()
     return buf;
 }
 
-// index type
+using TMyFastConfig = seqan::FastFMIndexConfig<void, uint32_t, 2, 1>;
+using TIndexConfig = seqan::BidirectionalIndex<seqan::FMIndex<void, TMyFastConfig> >;
 
-// typedef StringSet<String<Dna>, Owner<ConcatDirect<> > > TDnaText;
-// typedef StringSet<String<Dna, MMap<> >, Owner<ConcatDirect<> > > TDnaTextMMap;
+template <typename TText>
+using TIndex = seqan::Index<TText, TIndexConfig>;
 
-// typedef Concatenator<TText>::Type TConcat;
-typedef FastFMIndexConfig<void, uint32_t, 2, 1> TMyFastConfig;
-typedef BidirectionalIndex<FMIndex<void, TMyFastConfig> > TIndexConfig;
-// typedef Index<TText, TIndexConfig> TIndex;
-// typedef Index<TTextMMap, TIndexConfig> TIndexMMap;
-// typedef Index<DnaString, TIndexConfig> TIndex;
-// typedef Iter<TIndex, VSTree<TopDown<> > > TIter;
+// template <typename T>
+// struct is_int_vector
+// {
+//     static constexpr bool value = false;
+// };
+//
+// template <uint8_t width_t>
+// struct is_int_vector<sdsl::int_vector<width_t> >
+// {
+//     static constexpr bool value = true;
+// };
+//
+// template <typename T>
+// constexpr bool is_int_vector<T>::value;
+//
+// template <uint8_t width_t>
+// constexpr bool is_int_vector<sdsl::int_vector<width_t> >::value;

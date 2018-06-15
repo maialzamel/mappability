@@ -1,28 +1,43 @@
-//#include <inttypes.h>
+#include <vector>
+#include <cstdint>
 
-//uint64_t startPos = 0;
+#include <seqan/arg_parse.h>
+#include <seqan/seq_io.h>
+#include <seqan/index.h>
+
+#include <sdsl/int_vector.hpp>
+
+// You can switch between different vector implementations. Consider that they have different thread safetyness!
+// typedef sdsl::int_vector<8> TVector;
+typedef std::vector<uint8_t> TVector;
+// constexpr uint64_t max_val = (1 << 8) - 1;
 
 #include "common.h"
 
-struct Options
+#include "algo1.hpp"
+#include "algo2.hpp"
+
+using namespace std;
+using namespace seqan;
+
+template <typename T>
+inline void save(vector<T> const & c, string const & output_path)
 {
-    unsigned errors;
-    unsigned length;
-    unsigned overlap;
-    unsigned threads;
-    bool mmap;
-    bool indels;
-    bool singleIndex;
-    CharString indexPath;
-    CharString outputPath;
-    CharString alphabet;
-};
+    std::ofstream outfile(output_path, std::ios::out | std::ofstream::binary);
+    std::copy(c.begin(), c.end(), std::ostream_iterator<uint8_t>(outfile));
+    outfile.close();
+}
+
+template <uint8_t width_t>
+inline void save(sdsl::int_vector<width_t> const & c, string const & output_path)
+{
+    store_to_file(c, output_path);
+}
 
 template <typename TDistance, typename TIndex, typename TText>
 inline void run(TIndex & index, TText const & text, Options & opt, signed chromosomeId)
 {
-    // sdsl::int_vector<16> c(seqan::length(text) - opt.length + 1);
-    std::vector<uint8_t> c(seqan::length(text) - opt.length + 1, 0);
+    TVector c(seqan::length(text) - opt.length + 1, 0);
 
     // TODO: is there an upper bound? are we interested whether a k-mer has 60.000 or 70.000 hits?
     cout << mytime() << "Vector initialized (size: " << c.size() << ")." << endl;
@@ -48,11 +63,7 @@ inline void run(TIndex & index, TText const & text, Options & opt, signed chromo
     if (chromosomeId >= 0)
         output_path += "-" + to_string(chromosomeId);
 
-    // store_to_file(c, output_path);
-
-    std::ofstream outfile(output_path, std::ios::out | std::ofstream::binary);
-    std::copy(c.begin(), c.end(), std::ostream_iterator<uint8_t>(outfile));
-    outfile.close();
+    save(c, output_path);
 
     cout << mytime() << "Saved to disk: " << output_path << '\n';
 }
@@ -63,18 +74,21 @@ inline void run(Options & opt)
     typedef String<TChar, TAllocConfig> TString;
     if (opt.singleIndex)
     {
-        Index<StringSet<TString, Owner<ConcatDirect<> > >, TIndexConfig> index;
+        typedef StringSet<TString, Owner<ConcatDirect<> > > TStringSet;
+
+        TIndex<TStringSet> index;
         open(index, toCString(opt.indexPath), OPEN_RDONLY);
 
         // TODO(cpockrandt): replace with a ConcatView
         auto & text = indexText(index);
-        typename Concatenator<StringSet<TString, Owner<ConcatDirect<> > >>::Type concatText = concat(text);
+        typename Concatenator<TStringSet>::Type concatText = concat(text);
 
         cout << mytime() << "Index loaded." << endl;
         run<TDistance>(index, concatText, opt, -1 /*no chromosomeId*/);
     }
     else
     {
+        // load chromosome ids
         StringSet<CharString> ids;
         CharString _indexPath = opt.indexPath;
         _indexPath += ".ids";
@@ -84,10 +98,10 @@ inline void run(Options & opt)
         {
             std::string _indexPath = toCString(opt.indexPath);
             _indexPath += "." + to_string(i);
-            Index<TString, TIndexConfig> index;
+            TIndex<TString> index;
             open(index, toCString(_indexPath), OPEN_RDONLY);
-            auto & text = indexText(index);
             cout << mytime() << "Index of " << ids[i] << " loaded." << endl;
+            auto & text = indexText(index);
             run<TDistance>(index, text, opt, i);
         }
     }
@@ -97,7 +111,7 @@ template <typename TChar, typename TAllocConfig>
 inline void run(Options & opt)
 {
     if (opt.indels) {
-        cerr << "Indels are not yet supported.\n";
+        cerr << "TODO: Indels are not yet supported.\n";
         exit(1);
         // run<TChar, TAllocConfig, EditDistance>(opt);
     }
@@ -146,9 +160,6 @@ int main(int argc, char *argv[])
     addOption(parser, ArgParseOption("t", "threads", "Number of threads", ArgParseArgument::INTEGER, "INT"));
     setDefaultValue(parser, "threads", omp_get_max_threads());
 
-    //addOption(parser, ArgParseOption("x", "startPos", "startPos (for debugging large genomes", ArgParseArgument::INT64, "INT64"));
-    //setDefaultValue(parser, "startPos", 0);
-
     ArgumentParser::ParseResult res = parse(parser, argc, argv);
     if (res != ArgumentParser::PARSE_OK)
         return res == ArgumentParser::PARSE_ERROR;
@@ -170,8 +181,6 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    cout << mytime() << "Program started." << endl;
-
     CharString _indexPath;
     _indexPath = opt.indexPath;
     _indexPath += ".singleIndex";
@@ -188,7 +197,7 @@ int main(int argc, char *argv[])
     else
     {
         // run<Dna5>(opt);
-        cerr << "Dna5 alphabet has not been tested yet. Please do and remove this error message afterwards.\n";
+        cerr << "TODO: Dna5 alphabet has not been tested yet. Please do and remove this error message afterwards.\n";
         exit(1);
     }
 }

@@ -1,4 +1,10 @@
+#include <seqan/arg_parse.h>
+#include <seqan/seq_io.h>
+#include <seqan/index.h>
+
 #include "common.h"
+
+using namespace seqan;
 
 template <typename TString, typename TStringSetConfig>
 void buildIndex(StringSet<TString, TStringSetConfig> const & chromosomes, CharString const & indexPath)
@@ -36,7 +42,7 @@ void run(StringSet<CharString> const & ids, TText const & chromosomes, bool cons
             // if (length(chromosomes) > 1)
             _indexPath += "." + std::to_string(i);
             buildIndex(chromosomes[i], _indexPath);
-            cout << ids[i] << " indexed." << endl;
+            std::cout << ids[i] << " indexed.\n" << std::flush;
         }
     }
     CharString _indexPath = indexPath;
@@ -74,7 +80,7 @@ int main(int argc, char *argv[])
     StringSet<Dna5String> chromosomes;
     SeqFileIn seqFileIn(toCString(genomePath));
     readRecords(ids, chromosomes, seqFileIn);
-    cout << "Number of sequences: " << length(chromosomes) << endl;
+    std::cout << "Number of sequences: " << length(chromosomes) << '\n';
 
     // check whether it can be converted to Dna4
     unsigned i = 0;
@@ -90,7 +96,7 @@ int main(int argc, char *argv[])
             break;
     }
     bool canConvert = i == length(chromosomes);
-    cout << "Index will be constructed using Dna" << (5 - canConvert) << " alphabet." << endl;
+    std::cout << "Index will be constructed using Dna" << (5 - canConvert) << " alphabet.\n" << std::flush;
 
     if (canConvert)
     {
@@ -110,7 +116,7 @@ int main(int argc, char *argv[])
     _indexPath = indexPath;
     _indexPath += ".ids";
     save(ids, toCString(_indexPath));
-    cout << "Index created successfully" << endl;
+    std::cout << "Index created successfully.\n";
 
     return 0;
 }

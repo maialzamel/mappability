@@ -1,81 +1,23 @@
 using namespace seqan;
 
-template <unsigned errors, typename TIndex, typename TContainer>
-inline void runAlgo2Prototype(TIndex & index, auto const & text, unsigned const length, TContainer & c, unsigned const threads)
-{
-    auto scheme = OptimalSearchSchemes<0, errors>::VALUE;
-    _optimalSearchSchemeComputeFixedBlocklength(scheme, length - 1);
-
-    uint64_t textLength = seqan::length(text);
-
-    #pragma omp parallel for schedule(dynamic, 1000000) num_threads(threads)
-    for (uint64_t i = 0; i < textLength - length + 1; i += 2)
-    {
-        unsigned hitsL = 0, hitsR = 0;
-        auto delegate = [&hitsL, &hitsR, i, length, textLength, &text](auto it, auto const & /*read*/, unsigned const errors_spent) {
-            if (errors_spent == errors)
-            {
-                if (i + length < textLength)
-                {
-                    auto it2 = it;
-                    if (goDown(it2, text[i + length], Rev()))
-                    {
-                        hitsR = std::min((uint64_t) countOccurrences(it2) + hitsR, (uint64_t) (1 << 16) - 1);
-                    }
-                }
-
-                if (goDown(it, text[i], Fwd()))
-                {
-                    hitsL = std::min((uint64_t) countOccurrences(it) + hitsL, (uint64_t) (1 << 16) - 1);
-                }
-            }
-            else
-            {
-                if (i + length < textLength)
-                {
-                    auto it2 = it;
-                    if (goDown(it2, Rev()))
-                    {
-                        do {
-                            hitsR = std::min((uint64_t) countOccurrences(it2) + hitsR, (uint64_t) (1 << 16) - 1);
-                        } while (goRight(it2, Rev()));
-                    }
-                }
-
-                if (goDown(it, Fwd()))
-                {
-                    do {
-                        hitsL = std::min((uint64_t) countOccurrences(it) + hitsL, (uint64_t) (1 << 16) - 1);
-                    } while (goRight(it, Fwd()));
-                }
-            }
-        };
-
-        auto const & needle = infix(text, i + 1, i + length);
-        Iter<TIndex, VSTree<TopDown<> > > it(index);
-        _optimalSearchScheme(delegate, it, needle, scheme, HammingDistance());
-        c[i] = hitsL;
-        if (i + 1 < c.size())
-            c[i + 1] = hitsR;
-    }
-}
-
 template <typename TIter>
 inline void extendExact(TIter it, unsigned * hits, auto & text, unsigned const length,
     uint64_t a, uint64_t b, // searched interval
     uint64_t ab, uint64_t bb // entire interval
 )
 {
+    constexpr uint64_t max_val = (1 << 8) - 1;
+
     if (b - a + 1 == length)
     {
-        hits[a-ab] = std::min((uint64_t) countOccurrences(it) + hits[a-ab], (uint64_t) (1 << 16) - 1);
+        hits[a-ab] = std::min((uint64_t) countOccurrences(it) + hits[a-ab], max_val);
         return;
     }
     //if (b + 1 <= bb)
     //{
         auto it2 = it;
         uint64_t brm = a + length - 1;
-        uint64_t b_new = b + (((brm - b) + 2 - 1) / 2); // ceil((bb - b)/2)
+        uint64_t b_new = b + (((brm - b) + 2 - 1) >> 1); // ceil((bb - b)/2)
         if (b_new <= bb)
         {
             bool success = true;
@@ -91,7 +33,7 @@ inline void extendExact(TIter it, unsigned * hits, auto & text, unsigned const l
     if (a - 1 >= ab)
     {
         int64_t alm = b + 1 - length;
-        int64_t a_new = alm + std::max((int64_t) ((a - alm) - 1) / 2, 0l);
+        int64_t a_new = alm + std::max((int64_t) ((a - alm) - 1) >> 1, 0l);
         for (int64_t i = a - 1; i >= a_new; --i)
         {
             if(!goDown(it, text[i], Fwd()))
@@ -182,6 +124,8 @@ inline void extend(TIter it, unsigned * hits, unsigned errors_left, auto & text,
     uint64_t ab, uint64_t bb // entire interval
 )
 {
+    constexpr uint64_t max_val = (1 << 8) - 1;
+    
     if (errors_left == 0)
     {
         extendExact(it, hits, text, length, a, b, ab, bb);
@@ -189,13 +133,13 @@ inline void extend(TIter it, unsigned * hits, unsigned errors_left, auto & text,
     }
     if (b - a + 1 == length)
     {
-        hits[a-ab] = std::min((uint64_t) countOccurrences(it) + hits[a-ab], (uint64_t) (1 << 16) - 1);
+        hits[a-ab] = std::min((uint64_t) countOccurrences(it) + hits[a-ab], max_val);
         return;
     }
     //if (b + 1 <= bb)
     //{
         uint64_t brm = a + length - 1;
-        uint64_t b_new = b + (((brm - b) + 2 - 1) / 2); // ceil((bb - b)/2)
+        uint64_t b_new = b + (((brm - b) + 2 - 1) >> 1); // ceil((bb - b)/2)
         if (b_new <= bb)
         {
             approxSearch(it, hits, errors_left, text, length,
@@ -210,7 +154,7 @@ inline void extend(TIter it, unsigned * hits, unsigned errors_left, auto & text,
     if (a - 1 >= ab)
     {
         int64_t alm = b + 1 - length;
-        int64_t a_new = alm + std::max((int64_t) ((a - alm) - 1) / 2, 0l);
+        int64_t a_new = alm + std::max((int64_t) ((a - alm) - 1) >> 1, 0l);
         approxSearch(it, hits, errors_left, text, length,
                      a, b, // searched interval
                      ab, bb, // entire interval

@@ -18,7 +18,7 @@ inline void runAlgo3Prototype(TIndex & index, auto const & text, unsigned const 
             uint16_t no_hits = 0;
             std::vector<Pair<uint16_t, uint32_t> > hits;
             auto delegate = [&no_hits, &hits](auto const &it, auto const & /*read*/, unsigned const /*errors*/) {
-                no_hits = std::min((uint64_t) countOccurrences(it) + no_hits, (uint64_t) (1 << 16) - 1);
+                no_hits = std::min((uint64_t) countOccurrences(it) + no_hits, max_val;
                 // TODO: handle duplicates for >2 errors or indels
                 for (auto occ : getOccurrences())
                     hits.append(occ);

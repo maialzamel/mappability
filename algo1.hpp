@@ -1,8 +1,9 @@
 using namespace seqan;
 
 template <unsigned errors, typename TIndex, typename TContainer>
-inline void runAlgo1(TIndex & index, auto const & text, unsigned const length, TContainer & c, unsigned const /*overlap*/, unsigned const threads)
+inline void runAlgoTrivial(TIndex & index, auto const & text, unsigned const length, TContainer & c, unsigned const /*overlap*/, unsigned const threads)
 {
+    constexpr uint64_t max_val = (1 << 8) - 1;
     auto scheme = OptimalSearchSchemes<0, errors>::VALUE;
     _optimalSearchSchemeComputeFixedBlocklength(scheme, length);
 
@@ -13,10 +14,10 @@ inline void runAlgo1(TIndex & index, auto const & text, unsigned const length, T
     {
         unsigned hits = 0;
         auto delegate = [&hits](auto const &it, auto const & /*read*/, unsigned const /*errors*/) {
-            if (hits + countOccurrences(it) < (1 << 16))
+            if (hits + countOccurrences(it) <= max_val)
                 hits += countOccurrences(it);
             else
-                hits = (1 << 16) - 1;
+                hits = max_val;
         };
 
         auto const & needle = infix(text, i, i + length);
