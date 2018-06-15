@@ -1,62 +1,46 @@
 using namespace seqan;
 
 template <unsigned errors, typename TIndex, typename TContainer>
-inline void runAlgo2Prototype(TIndex & index, auto const & text, unsigned const length, TContainer & c, unsigned const threads)
+inline void runAlgo3Prototype(TIndex & index, auto const & text, unsigned const length, TContainer & c, unsigned const /*overlap*/, unsigned const threshold, unsigned const threads)
 {
     auto scheme = OptimalSearchSchemes<0, errors>::VALUE;
-    _optimalSearchSchemeComputeFixedBlocklength(scheme, length - 1);
+    _optimalSearchSchemeComputeFixedBlocklength(scheme, length);
 
-    uint64_t textLength = seqan::length(text);
+    uint64_t const textLength = seqan::length(text);
+
+    auto const limits = stringSetLimits(text);
 
     #pragma omp parallel for schedule(dynamic, 1000000) num_threads(threads)
-    for (uint64_t i = 0; i < textLength - length + 1; i += 2)
+    for (uint64_t i = 0; i < textLength - length + 1; ++i)
     {
-        unsigned hitsL = 0, hitsR = 0;
-        auto delegate = [&hitsL, &hitsR, i, length, textLength, &text](auto it, auto const & /*read*/, unsigned const errors_spent) {
-            if (errors_spent == errors)
-            {
-                if (i + length < textLength)
-                {
-                    auto it2 = it;
-                    if (goDown(it2, text[i + length], Rev()))
-                    {
-                        hitsR = std::min((uint64_t) countOccurrences(it2) + hitsR, (uint64_t) (1 << 16) - 1);
-                    }
-                }
+        if (c[i] == 0)
+        {
+            uint16_t no_hits = 0;
+            std::vector<Pair<uint16_t, uint32_t> > hits;
+            auto delegate = [&no_hits, &hits](auto const &it, auto const & /*read*/, unsigned const /*errors*/) {
+                no_hits = std::min((uint64_t) countOccurrences(it) + no_hits, (uint64_t) (1 << 16) - 1);
+                // TODO: handle duplicates for >2 errors or indels
+                for (auto occ : getOccurrences())
+                    hits.append(occ);
+            };
 
-                if (goDown(it, text[i], Fwd()))
+            auto const & needle = infix(text, i, i + length);
+            Iter<TIndex, VSTree<TopDown<> > > it(index);
+            _optimalSearchScheme(delegate, it, needle, scheme, HammingDistance());
+            c[i] = no_hits;
+            if (no_hits > threshold)
+            {
+                for (auto hit : hits)
                 {
-                    hitsL = std::min((uint64_t) countOccurrences(it) + hitsL, (uint64_t) (1 << 16) - 1);
+                    auto pos = posGlobalize(hit, limits);
+                    c[pos] = std::max(no_hits, c[pos]);
+                    // if (c[pos] == 0)
+                    //     c[pos] = no_hits;
+                    // else
+                    //     c[pos] = std::max(no_hits, c[pos]);
                 }
             }
-            else
-            {
-                if (i + length < textLength)
-                {
-                    auto it2 = it;
-                    if (goDown(it2, Rev()))
-                    {
-                        do {
-                            hitsR = std::min((uint64_t) countOccurrences(it2) + hitsR, (uint64_t) (1 << 16) - 1);
-                        } while (goRight(it2, Rev()));
-                    }
-                }
-
-                if (goDown(it, Fwd()))
-                {
-                    do {
-                        hitsL = std::min((uint64_t) countOccurrences(it) + hitsL, (uint64_t) (1 << 16) - 1);
-                    } while (goRight(it, Fwd()));
-                }
-            }
-        };
-
-        auto const & needle = infix(text, i + 1, i + length);
-        Iter<TIndex, VSTree<TopDown<> > > it(index);
-        _optimalSearchScheme(delegate, it, needle, scheme, HammingDistance());
-        c[i] = hitsL;
-        if (i + 1 < c.size())
-            c[i + 1] = hitsR;
+        }
     }
 }
 

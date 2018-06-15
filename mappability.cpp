@@ -21,7 +21,9 @@ struct Options
 template <typename TDistance, typename TIndex, typename TText>
 inline void run(TIndex & index, TText const & text, Options & opt, signed chromosomeId)
 {
-    sdsl::int_vector<16> c(seqan::length(text) - opt.length + 1);
+    // sdsl::int_vector<16> c(seqan::length(text) - opt.length + 1);
+    std::vector<uint8_t> c(seqan::length(text) - opt.length + 1, 0);
+
     // TODO: is there an upper bound? are we interested whether a k-mer has 60.000 or 70.000 hits?
     cout << mytime() << "Vector initialized (size: " << c.size() << ")." << endl;
     switch (opt.errors)
@@ -42,15 +44,17 @@ inline void run(TIndex & index, TText const & text, Options & opt, signed chromo
     cout << mytime() << "Done.\n";
 
     std::string output_path = toCString(opt.outputPath);
-    output_path += "_" + to_string(opt.errors) + "_" + to_string(opt.length) + "_" + to_string(opt.overlap) + "-";
+    output_path += "_" + to_string(opt.errors) + "_" + to_string(opt.length) + "_" + to_string(opt.overlap);
     if (chromosomeId >= 0)
-        output_path += to_string(chromosomeId);
-    store_to_file(c, output_path);
-    cout << mytime() << "Saved to disk: " << output_path << '\n';
+        output_path += "-" + to_string(chromosomeId);
 
-    // for (unsigned i = 0; i < 200; ++i)
-    //     std::cout << c[i] << ' ';
-    // std::cout << '\n';
+    // store_to_file(c, output_path);
+
+    std::ofstream outfile(output_path, std::ios::out | std::ofstream::binary);
+    std::copy(c.begin(), c.end(), std::ostream_iterator<uint8_t>(outfile));
+    outfile.close();
+
+    cout << mytime() << "Saved to disk: " << output_path << '\n';
 }
 
 template <typename TChar, typename TAllocConfig, typename TDistance>

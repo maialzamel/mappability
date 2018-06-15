@@ -1,7 +1,7 @@
 using namespace seqan;
 
-template <unsigned errors, typename TIndex>
-inline void runAlgo1(TIndex & index, auto const & text, unsigned const length, sdsl::int_vector<16> & c, unsigned const /*overlap*/, unsigned const threads)
+template <unsigned errors, typename TIndex, typename TContainer>
+inline void runAlgo1(TIndex & index, auto const & text, unsigned const length, TContainer & c, unsigned const /*overlap*/, unsigned const threads)
 {
     auto scheme = OptimalSearchSchemes<0, errors>::VALUE;
     _optimalSearchSchemeComputeFixedBlocklength(scheme, length);
