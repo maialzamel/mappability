@@ -30,19 +30,7 @@ void dump(CharString const & inputPath, CharString const & outputPath)
         copy(v.begin(), v.end(), (std::ostream_iterator<value_t>(outfile), std::ostream_iterator<int>(outfile, " ")));
 
         cout << "Done.\n";
-       int i=0;
-        cout << "number of runs\n";
-        for (int j=0; j< v.size();j++){
 
-        while (v[i+j]==1 && v[i+j]< v.size())
-        i++;
-
-        if (i>100)
-          cout <<"pos " << j <<" run's len "<< i <<'\n';
-
-        j+=i;
-        i=0;
-}
         return;
     }
 
