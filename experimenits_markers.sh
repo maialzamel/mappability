@@ -1,14 +1,4 @@
 #!/bin/bash
-
-
-
-for i in {0..31}; do
-echo $i >> concatenated.fasta
-cat ./outputdump/"$i.fasta" >> concatenated.fasta
-
- done
-
-
 mkdir output
 mkdir index
 mkdir outputdump
@@ -22,7 +12,6 @@ for ((i=0; i<=31; i++)); do
 ./mappability_dump -I ./output/$i'_'$e'_'$k'_'20.gmapp8 -O ./outputdump/$i.fasta
 
 done
-
 ./create_index -G ./data/merged-file.fasta -I ./index/merged-file
 ./mappability -I ./index/merged-file -K $k -E $e -o $o -O ./output/merged-file
 ./mappability_dump -I ./output/merged-file_${e}_${k}_20.gmapp8 -O ./merged-file.fasta
