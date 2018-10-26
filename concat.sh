@@ -1,9 +1,19 @@
-#!/bin/bash
 
-for i in {0..31}; do
+#! /usr/bin/bash
+cd outputdump
+for i in {0..31} ; do
+sed 's/$/     /' $i.fasta > $i+1.fasta 
+ 
+done 
 
 
-cat ./outputdump/"$i.fasta"  >> concatenated.fasta
+cd outputdump
+for i in {0..31} ; do
+cat $i+1.fasta > all 
+ 
+done 
 
 
- done
+exit 0
+
+
