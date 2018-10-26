@@ -9,7 +9,7 @@ done
 
 cd outputdump
 for i in {0..31} ; do
-cat $i+1.fasta > all 
+cat $i+1.fasta > contactall.fasta 
  
 done 
 
