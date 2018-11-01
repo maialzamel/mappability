@@ -11,8 +11,9 @@ void marker(CharString const & inputPath1, CharString const & inputPath2)
 int number;
 vector <int> file_size;
  vector<int> v1;
+int prev_size=0;
 
-for(int i=0;i<=31;i++){
+for(int i=1;i<=30;i++){
  ifstream file(toCString("./outputdump/"+std::to_string(i)+".fasta"), std::ios::binary);
 
 if (!file.eof() && !file.fail())
@@ -28,7 +29,19 @@ v1.push_back(number);
 
 }
 file.close();
+if (i==1){
 file_size.push_back(v1.size());
+prev_size=v1.size();
+
+cout << v1.size()<<endl;
+}
+else{
+file_size.push_back(v1.size()+prev_size);
+prev_size+=v1.size();
+cout <<v1.size()<<endl;
+
+}
+
 v1.clear();
 
 }
@@ -36,16 +49,22 @@ v1.clear();
 }
 
 
+            
+
+for (int i=0;i< file_size.size();i++){
+
+
+cout << file_size.at(i)<<endl;
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 
-    ifstream original_file(toCString(inputPath1), std::ios::binary);
-     ifstream contacted_file(toCString(inputPath2), std::ios::binary);
-
+ifstream original_file(toCString(inputPath1), std::ios::binary);
+ifstream contacted_file(toCString(inputPath2), std::ios::binary);
 vector<int> contacted_v;
-  vector<int> v;
+vector<int> v;
 if (!contacted_file.eof() && !contacted_file.fail())
 {
 
@@ -77,7 +96,7 @@ original_file.close();
 
 }
   
-  
+  cout <<file_size.size()<<endl;
   
    
          int i=0;
@@ -92,45 +111,40 @@ original_file.close();
 
 
 
-        if (i>100){
-
-            int genome_pos=0;
-
-           for(int k=0; k<=31;k++){
-            if (j>=genome_pos && j<= (file_size.at(k)+genome_pos)){
-              if (k==0)
-               cout <<"  genome "<< k <<" Starting Pos of Marker: " << (j) <<" run's len "<< i <<'\n';
-//else
-//cout <<"  genome "<< k <<" Starting Pos of Marker: " << (j)-file_size.at(k-1) <<" run's len "<< i <<'\n';
-
-              break;
-                 }//end if 
-            else{  
-  
-               genome_pos+=file_size.at(k);
+        if (i==100){
 
 
-}
-                                  }//end loop
 
 
-       
+          for (int k=0;k<=29;k++){
+                 if(k==0)
+                if (j >= 0 && j < file_size.at(k) ){
+                cout <<j;
+                cout << " genome 1"<< endl; 
+
+               cout << " Pos "<<j << endl; 
+                                                   }
+                if (k==1)
+
+                 if (j >= file_size.at(k-1) && j < file_size.at(k) ){
+        
+                 cout << " genome "<<k+1 <<" "<< file_size.at(k) << endl; 
+
+                  cout << " Pos "<<j-file_size.at(k-1) << endl; 
+
+                                                                    }
+                                      }//end loop
  
-                         }//end if
+              }//end if
 
 
         j+=i;
         i=0;
 
       
-}
-int sum=0;
-for (int i=0; i< file_size.size();i++){
-sum+=file_size.at(i);
-}
+}//end big for 
 
 
-cout << v.at(v.size()-1) << " "<< contacted_v.at(contacted_v.size()-1)<<" "<<sum<<endl;
 
 }
 
@@ -150,11 +164,11 @@ int main(int argc, char *argv[])
     ArgumentParser::ParseResult res = parse(parser, argc, argv);
     if (res != ArgumentParser::PARSE_OK)
         return res == ArgumentParser::PARSE_ERROR;
-CharString inputPath, comparedPath;
-    getOptionValue(inputPath, parser, "input");
-   getOptionValue(comparedPath, parser, "compared");
-  string _inputPath = toCString(inputPath);
- string _inputPath2 = toCString(comparedPath);
+     CharString inputPath, comparedPath;
+     getOptionValue(inputPath, parser, "input");
+    getOptionValue(comparedPath, parser, "compared");
+    string _inputPath = toCString(inputPath);
+   string _inputPath2 = toCString(comparedPath);
 
     marker(inputPath,comparedPath);
     return 0;
