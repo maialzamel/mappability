@@ -15,8 +15,10 @@ void marker(CharString const & inputPath1, CharString const & inputPath2)
 string chr_info, chr_info2;
 char singleCharacter;
 int pos=0;
- ifstream file2(toCString("./outputdump/GCF_000177135.fasta"), std::ios::binary);
- ifstream file(toCString("./data/GCF_000177135.fasta"), std::ios::binary);
+ ifstream file2(toCString(inputPath1), std::ios::binary);
+ ifstream file(toCString(inputPath2), std::ios::binary);
+ ofstream myfile;
+  myfile.open ("output.txt");
 
 if (!file.eof() && !file.fail())
 {
@@ -61,15 +63,16 @@ file2.close();
 int j=0;
 for (int i=0; i<v1.size();i++){
 
-cout << v1.at(i).second << " ";
-cout << v1.at(i).first <<  " ";
+ myfile << v1.at(i).second << " ";
+ myfile << v1.at(i).first <<  " ";
 if (!(v1.at(i).second  == -1)&& i <v2.size()){
-cout << v2.at(j).second << " ";
-cout << v2.at(j++).first ;
+ myfile << v2.at(j).second << " ";
+ myfile << v2.at(j++).first ;
 }
-cout <<endl;
+ myfile <<endl;
+
 }
-cout << v1.size() << " "<< v2.size()<<endl;
+
 
 }
 
